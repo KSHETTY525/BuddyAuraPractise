@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_popular"
+        android:icon="@drawable/baseline_home_24"
+        android:title="Popular" />
+
+    <item
+        android:id="@+id/nav_category"
+        android:icon="@drawable/baseline_category_24"
+        android:title="Category" />
+
+    <item
+        android:id="@+id/nav_shared"
+        android:icon="@android:drawable/ic_menu_share"
+        android:title="Shared" />
+
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/outline_account_circle_24"
+        android:title="Profile" />
+
+
+
+
+</menu>
