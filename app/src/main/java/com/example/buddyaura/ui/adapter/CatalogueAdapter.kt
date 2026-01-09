@@ -35,11 +35,9 @@ class CatalogueAdapter(
         holder.productDesc.text = item.description
         holder.productPrice.text = "₹${item.price}"
 
-        // ✅ SET IMAGE FROM DRAWABLE
         holder.productImage.setImageResource(item.imageRes)
 
         holder.shareBtn.setOnClickListener {
-            // TODO: share product
         }
     }
 

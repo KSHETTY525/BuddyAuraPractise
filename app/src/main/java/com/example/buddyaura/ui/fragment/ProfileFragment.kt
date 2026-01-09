@@ -1,84 +1,196 @@
 package com.example.buddyaura.ui.fragment
 
-import android.app.AlertDialog
-import android.content.ContentValues
+import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.provider.MediaStore
+import android.provider.Settings
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.example.buddyaura.ProfileViewModel
 import com.example.buddyaura.R
-import com.example.buddyaura.ui.adapter.ProfileImagesAdapter
 
-class ProfileFragment : Fragment(R.layout.fragment_profile) {
+class ProfileFragment : Fragment() {
 
     private lateinit var profileImage: ImageView
-    private lateinit var recycler: RecyclerView
-    private lateinit var adapter: ProfileImagesAdapter
-    private lateinit var viewModel: ProfileViewModel
+    private lateinit var editIcon: ImageView
+    private lateinit var deleteIcon: ImageView
+    private var currentImageUri: Uri? = null
+    private var denyCount = 0
+    private var isFirstSet = true
 
-    private var imageUri: Uri? = null
 
-    // 📷 Camera (single image)
-    private val cameraLauncher =
-        registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
-            if (success && imageUri != null) {
-                viewModel.imageList.add(imageUri!!)
-                showLatestImage()
-                adapter.notifyDataSetChanged()
+    // ---------------- Permission Launcher ----------------
+    private val permissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+
+            val cameraGranted = permissions[Manifest.permission.CAMERA] == true
+            val mediaGranted =
+                permissions[Manifest.permission.READ_MEDIA_IMAGES] == true ||
+                        permissions[Manifest.permission.READ_EXTERNAL_STORAGE] == true
+
+            if (cameraGranted && mediaGranted) {
+                denyCount = 0
+                showCameraGalleryDialog()
+            } else {
+                denyCount++
+
+                if (denyCount >= 2) {
+                    showPermissionExplanationDialog()
+                } else {
+                    Toast.makeText(requireContext(), "Permission required", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
-    // 🖼️ Gallery (MULTIPLE images)
+    // ---------------- GALLERY LAUNCHER ----------------
     private val galleryLauncher =
-        registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-            if (uris.isNotEmpty()) {
-                viewModel.imageList.addAll(uris)
-                showLatestImage()
-                adapter.notifyDataSetChanged()
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            uri?.let {
+                currentImageUri = it
+                profileImage.setImageURI(it)
+                deleteIcon.visibility = View.VISIBLE
+                showSuccessToast()
             }
         }
+
+    // ---------------- CAMERA LAUNCHER ----------------
+    private val cameraLauncher =
+        registerForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+            bitmap?.let {
+                profileImage.setImageBitmap(it)
+                deleteIcon.visibility = View.VISIBLE
+                showSuccessToast()
+            }
+        }
+
+    private fun showSuccessToast() {
+        if (isFirstSet) {
+            Toast.makeText(requireContext(), "Profile Image Set!", Toast.LENGTH_SHORT).show()
+            isFirstSet = false
+        } else {
+            Toast.makeText(requireContext(), "Profile Image Updated!", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // ---------------- View Setup ----------------
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View = inflater.inflate(R.layout.fragment_profile, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Init ViewModel
-        viewModel = ViewModelProvider(requireActivity())[ProfileViewModel::class.java]
-
-        // Init views
         profileImage = view.findViewById(R.id.profileImage)
-        recycler = view.findViewById(R.id.profileImagesRecycler)
+        editIcon = view.findViewById(R.id.editIcon)
+        deleteIcon = view.findViewById(R.id.deleteIcon)
 
-        // Setup RecyclerView
-        adapter = ProfileImagesAdapter(viewModel.imageList)
-        recycler.layoutManager =
-            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        recycler.adapter = adapter
+        profileImage.setOnClickListener { handleProfileClick() }
+        editIcon.setOnClickListener {
+            handleProfileClick()
+        }
 
-        // Restore last image
-        showLatestImage()
+        deleteIcon.setOnClickListener {
+            currentImageUri = null
+            profileImage.setImageResource(R.drawable.outline_account_circle_24)
+            deleteIcon.visibility = View.GONE
 
-        profileImage.setOnClickListener {
-            showImagePickerDialog()
+            Toast.makeText(
+                requireContext(),
+                "Profile Image deleted successfully!",
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
-    private fun showLatestImage() {
-        if (viewModel.imageList.isNotEmpty()) {
-            profileImage.setImageURI(viewModel.imageList.last())
+    // ---------------- Main Logic ----------------
+    private fun handleProfileClick() {
+        if (hasAllPermissions()) {
+            showCameraGalleryDialog()
+        } else {
+            if (denyCount >= 2) {
+                showPermissionExplanationDialog()
+            } else {
+                requestPermissions()
+            }
         }
     }
 
-    private fun showImagePickerDialog() {
-        val options = arrayOf("Camera", "Gallery")
+    // ---------------- Permission Helpers ----------------
+    private fun hasAllPermissions(): Boolean {
+        val camera = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val media = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.READ_MEDIA_IMAGES
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        return camera && media
+    }
+
+    private fun requestPermissions() {
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_MEDIA_IMAGES
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        }
+
+        permissionLauncher.launch(permissions)
+    }
+
+    // ---------------- Custom Explanation Dialog ----------------
+    private fun showPermissionExplanationDialog() {
         AlertDialog.Builder(requireContext())
-            .setTitle("Select Profile Picture")
+            .setTitle("Permission Required")
+            .setMessage("You need to give camera and media permission in order to set the profile image.")
+            .setPositiveButton("OK") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun openAppSettings() {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", requireContext().packageName, null)
+        )
+        startActivity(intent)
+    }
+
+    // ---------------- UI ACTIONS ----------------
+    private fun showCameraGalleryDialog() {
+        val options = arrayOf("Camera", "Gallery")
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Select Option")
             .setItems(options) { _, which ->
                 if (which == 0) openCamera() else openGallery()
             }
@@ -86,63 +198,14 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     }
 
     private fun openCamera() {
-        imageUri = createImageUri()
-        cameraLauncher.launch(imageUri)
-    }
-
-    private val galleryPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                openGalleryInternal()
-            } else {
-                showPermissionMessage()
-            }
+        try {
+            cameraLauncher.launch(null)
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(requireContext(), "Camera app not found", Toast.LENGTH_SHORT).show()
         }
-
+    }
 
     private fun openGallery() {
         galleryLauncher.launch("image/*")
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            // ✅ Android 13+ → no permission needed
-            openGalleryInternal()
-        } else {
-            // ❗ Android 12 and below → permission required
-            if (requireContext().checkSelfPermission(
-                    android.Manifest.permission.READ_EXTERNAL_STORAGE
-                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            ) {
-                openGalleryInternal()
-            } else {
-                galleryPermissionLauncher.launch(
-                    android.Manifest.permission.READ_EXTERNAL_STORAGE
-                )
-            }
-        }
     }
-
-    private fun openGalleryInternal() {
-        galleryLauncher.launch("image/*")
-    }
-
-    private fun showPermissionMessage() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Permission Required")
-            .setMessage("Please give permission to access gallery")
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-
-
-    private fun createImageUri(): Uri {
-        val contentValues = ContentValues().apply {
-            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-        }
-        return requireContext().contentResolver.insert(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            contentValues
-        )!!
-    }
-
-
 }

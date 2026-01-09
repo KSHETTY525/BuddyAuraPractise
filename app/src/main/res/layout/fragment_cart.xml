@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+
+
+    <TextView
+        android:id="@+id/cartTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Your Cart"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/cartCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Items: 0"
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Title -->
+
+    <!-- Cart Items -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/cartRecycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"/>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#DDDDDD"
+        android:layout_marginVertical="8dp"/>
+
+    <!-- Total Price -->
+    <TextView
+        android:id="@+id/totalPriceText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Total: ₹0"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp"/>
+
+
+    <Button
+        android:id="@+id/btnRemoveSelected"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Remove Selected"
+        android:layout_marginBottom="12dp"
+        android:backgroundTint="@color/ocean"
+        android:textColor="@android:color/white"/>
+
+
+    <!-- Proceed Button -->
+    <Button
+        android:id="@+id/btnProceed"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Proceed to Buy"
+        android:backgroundTint="@color/ocean"
+        android:textColor="@android:color/white"/>
+
+
+
+
+
+
+</LinearLayout>

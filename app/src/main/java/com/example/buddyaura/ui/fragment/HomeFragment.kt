@@ -1,9 +1,16 @@
 package com.example.buddyaura.ui.fragment
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -12,14 +19,27 @@ import com.example.buddyaura.data.Catalogue
 import com.example.buddyaura.data.Category
 import com.example.buddyaura.ui.activity.HomeActivity
 import com.example.buddyaura.R
+import com.example.buddyaura.receiver.CartUpdateReceiver
+import com.example.buddyaura.receiver.OfferAlarmReceiver
 import com.example.buddyaura.ui.adapter.BannerAdapter
 import com.example.buddyaura.ui.adapter.CatalogueAdapter
 import com.example.buddyaura.ui.adapter.CategoryAdapter
+import com.example.buddyaura.util.BroadcastActions
+import com.example.buddyaura.util.CartManager
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
+
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private lateinit var bannerViewPager: ViewPager2
     private lateinit var bannerAdapter: BannerAdapter
+    private lateinit var bannerIndicator: TabLayout
+
+    private lateinit var cartBadge: TextView
+    private lateinit var cartReceiver: CartUpdateReceiver
+
+
 
     private val bannerImages = listOf(
         R.drawable.banner1,
@@ -47,23 +67,43 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        cartBadge = requireActivity().findViewById(R.id.cartBadge)
+
+        updateCartBadge(CartManager.getItemCount())
+
+        cartReceiver = CartUpdateReceiver { count ->
+            updateCartBadge(count)
+        }
+
+
         bannerViewPager = view.findViewById(R.id.bannerViewPager)
-        setupBanner()
-
-
+        bannerIndicator = view.findViewById(R.id.bannerIndicator)
         categoryRecycler = view.findViewById(R.id.categoryRecycler)
         productRecycler = view.findViewById(R.id.catalogueRecycler)
 
+        setupBanner()
         setupCategories()
         setupProducts()
         loadInitialProducts()
+        scheduleOfferAlarm()
     }
+
+    private fun updateCartBadge(count: Int) {
+        if (count > 0) {
+            cartBadge.visibility = View.VISIBLE
+            cartBadge.text = count.toString()
+        } else {
+            cartBadge.visibility = View.GONE
+        }
+    }
+
 
     private fun setupBanner() {
         bannerAdapter = BannerAdapter(bannerImages)
         bannerViewPager.adapter = bannerAdapter
 
-        // Auto-scroll every 3 seconds
+        TabLayoutMediator(bannerIndicator, bannerViewPager) { _, _ -> }.attach()
+
         bannerHandler.postDelayed(object : Runnable {
             override fun run() {
                 if (bannerImages.isNotEmpty()) {
@@ -73,6 +113,30 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 bannerHandler.postDelayed(this, 3000)
             }
         }, 3000)
+    }
+
+    private fun scheduleOfferAlarm() {
+
+        val alarmManager =
+            requireContext().getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        val intent = Intent(requireContext(), OfferAlarmReceiver::class.java)
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            requireContext(),
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val triggerTime = System.currentTimeMillis() + 2_000 // 10 seconds (testing)
+
+        alarmManager.setRepeating(
+            AlarmManager.RTC_WAKEUP,
+            triggerTime,
+            AlarmManager.INTERVAL_DAY,
+            pendingIntent
+        )
     }
 
     fun filterProducts(query: String) {
@@ -154,11 +218,30 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         isLoading = false
     }
 
+    override fun onStart() {
+        super.onStart()
+        val filter = IntentFilter(BroadcastActions.CART_UPDATED)
+
+        ContextCompat.registerReceiver(
+            requireActivity(),
+            cartReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+
     override fun onResume() {
         super.onResume()
         (activity as HomeActivity).showSearchBar()
+        (activity as HomeActivity).updateCartBadge()
     }
 
+
+    override fun onStop() {
+        super.onStop()
+        requireActivity().unregisterReceiver(cartReceiver)
+    }
 
     override fun onDestroyView() {
         super.onDestroyView()

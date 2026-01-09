@@ -8,6 +8,7 @@
     android:background="@android:color/white"
     android:elevation="4dp">
 
+    <!-- App Title -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -17,11 +18,34 @@
         android:textStyle="bold"
         android:textColor="@color/ocean"/>
 
-    <ImageView
-        android:id="@+id/cartIcon"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_marginRight="10dp"
+    <!-- Cart icon + badge -->
+    <FrameLayout
+        android:id="@+id/cartContainer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="end|center_vertical"
-        android:src="@drawable/cart"/>
+        android:layout_marginEnd="10dp">
+
+        <ImageView
+            android:id="@+id/cartIcon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:src="@drawable/cart"/>
+
+        <!-- Cart Count Badge -->
+        <TextView
+            android:id="@+id/cartBadge"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:layout_gravity="top|end"
+            android:layout_marginEnd="-4dp"
+            android:layout_marginTop="-4dp"
+            android:background="@drawable/cart_badge_bg"
+            android:text="0"
+            android:textColor="@android:color/white"
+            android:textSize="10sp"
+            android:gravity="center"
+            android:visibility="gone"/>
+    </FrameLayout>
+
 </androidx.appcompat.widget.Toolbar>
