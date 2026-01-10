@@ -8,6 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.buddyaura.R
 import com.example.buddyaura.data.Catalogue
 import com.example.buddyaura.ui.fragment.ProductDetailFragment
@@ -32,19 +33,30 @@ class CategoryProductAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = list[position]
 
-        // Bind data
-        holder.img.setImageResource(item.imageRes)
+        val context = holder.itemView.context
+
+        if (item.imageUrl != null && item.imageUrl.isNotEmpty()) {
+            Glide.with(context)
+                .load(item.imageUrl)
+                .placeholder(R.drawable.placeholder)
+                .error(R.drawable.placeholder)
+                .into(holder.img)
+        } else if (item.imageRes != null) {
+            holder.img.setImageResource(item.imageRes)
+        } else {
+            holder.img.setImageResource(R.drawable.placeholder)
+        }
+
         holder.name.text = item.title
         holder.desc.text = item.description
         holder.price.text = "₹${item.price}"
 
-        // Handle click
         holder.itemView.setOnClickListener {
-
             val fragment = ProductDetailFragment()
 
             val bundle = Bundle().apply {
-                putInt("imageRes", item.imageRes)
+                putString("imageUrl", item.imageUrl)
+                putInt("imageRes", item.imageRes ?: 0)
                 putString("name", item.title)
                 putString("description", item.description)
                 putInt("price", item.price)
@@ -52,7 +64,7 @@ class CategoryProductAdapter(
 
             fragment.arguments = bundle
 
-            val activity = holder.itemView.context as AppCompatActivity
+            val activity = context as AppCompatActivity
             activity.supportFragmentManager
                 .beginTransaction()
                 .replace(R.id.fragmentContainer, fragment)
@@ -61,5 +73,12 @@ class CategoryProductAdapter(
         }
     }
 
+
     override fun getItemCount(): Int = list.size
+
+    fun updateList(newList: List<Catalogue>) {
+        list.clear()
+        list.addAll(newList)
+        notifyDataSetChanged()
+    }
 }

@@ -54,6 +54,16 @@
             android:textColor="@color/ocean"
             android:paddingTop="8dp" />
 
+        <Button
+            android:id="@+id/downloadBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Download Image"
+            android:layout_marginTop="6dp"
+            android:backgroundTint="@color/ocean"
+            android:textColor="@android:color/white" />
+
+
         <!-- SHARE BUTTON -->
         <Button
             android:id="@+id/shareBtn"

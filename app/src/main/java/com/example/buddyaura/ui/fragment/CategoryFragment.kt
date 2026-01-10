@@ -2,7 +2,10 @@ package com.example.buddyaura.ui.fragment
 
 import android.content.IntentFilter
 import android.os.Bundle
+import android.util.Log
 import android.view.View
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -24,10 +27,13 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
     private lateinit var categoryRecycler: RecyclerView
     private lateinit var productRecycler: RecyclerView
     private lateinit var productAdapter: CategoryProductAdapter
-
     private lateinit var cartBadge: TextView
     private lateinit var cartReceiver: CartUpdateReceiver
 
+    // 🔹 Master list (always full data)
+    private val allProducts = mutableListOf<Catalogue>()
+
+    // 🔹 Display list (filtered)
     private val productList = mutableListOf<Catalogue>()
 
     private val categories = listOf(
@@ -46,10 +52,14 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
         super.onViewCreated(view, savedInstanceState)
 
         cartBadge = requireActivity().findViewById(R.id.cartBadge)
-        updateCartBadge(CartManager.getItemCount())
+        updateCartBadgeFromFragment(CartManager.getItemCount())
 
         cartReceiver = CartUpdateReceiver { count ->
-            updateCartBadge(count)
+            updateCartBadgeFromFragment(count)
+        }
+
+        view.findViewById<TextView>(R.id.btnSort).setOnClickListener {
+            showSortBottomSheet()
         }
 
         categoryRecycler = view.findViewById(R.id.leftCategoryRecycler)
@@ -64,6 +74,7 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
         productAdapter = CategoryProductAdapter(productList)
         productRecycler.adapter = productAdapter
 
+        // Load first category by default
         loadProducts(categories.first().name)
     }
 
@@ -84,16 +95,50 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
         requireActivity().unregisterReceiver(cartReceiver)
     }
 
-
     override fun onResume() {
         super.onResume()
         (activity as HomeActivity).showSearchBar()
-        (activity as HomeActivity).updateCartBadge()
+        (activity as HomeActivity).updateCartBadgeFromFragment()
     }
 
+    private fun showSortBottomSheet() {
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(requireContext())
+        val view = layoutInflater.inflate(R.layout.bottom_sheet_sort, null)
 
+        val radioGroup = view.findViewById<RadioGroup>(R.id.radioGroupSort)
+        val lowToHigh = view.findViewById<RadioButton>(R.id.rbLowToHigh)
+        val highToLow = view.findViewById<RadioButton>(R.id.rbHighToLow)
 
-    private fun updateCartBadge(count: Int) {
+        radioGroup.setOnCheckedChangeListener { _, checkedId ->
+            when (checkedId) {
+                R.id.rbLowToHigh -> {
+                    sortProductsLowToHigh()
+                    dialog.dismiss()
+                }
+
+                R.id.rbHighToLow -> {
+                    sortProductsHighToLow()
+                    dialog.dismiss()
+                }
+            }
+        }
+
+        dialog.setContentView(view)
+        dialog.show()
+    }
+
+    private fun sortProductsLowToHigh() {
+        val sorted = productList.sortedBy { it.price }
+        productAdapter.updateList(sorted)
+    }
+
+    private fun sortProductsHighToLow() {
+        val sorted = productList.sortedByDescending { it.price }
+        productAdapter.updateList(sorted)
+    }
+
+    // 🔴 Cart Badge Update
+    private fun updateCartBadgeFromFragment(count: Int) {
         if (count > 0) {
             cartBadge.visibility = View.VISIBLE
             cartBadge.text = count.toString()
@@ -102,60 +147,74 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
         }
     }
 
+    // 🛒 Load products per category
     private fun loadProducts(category: String) {
+        Log.d("CATEGORY", "Products loaded: ${productList.size}")
+
+        allProducts.clear()
         productList.clear()
 
-        when (category) {
-            "Beauty" -> productList.addAll(
-                listOf(
-                    Catalogue("Nivea Moisturizer", "Skin care", 349, R.drawable.nivea),
-                    Catalogue("Makeup Kit", "Eyeshadow palette", 799, R.drawable.makeup),
-                    Catalogue("Maybelline Mascara", "Black Bold Mascara", 349, R.drawable.mascara),
-                    Catalogue("Elle 18 Kajal", "Black Smoky Kajal", 120, R.drawable.kajal),
-                    Catalogue("Pilgrim Serum", "Skin care", 449, R.drawable.pilgrim),
-                    Catalogue("Lip gloss", "Lip gloss", 99, R.drawable.gloss),
-                    Catalogue("Maybelline cheek tint", "Cherry Blush", 679, R.drawable.blush),
-                    Catalogue("Lakme Lipstick", "Matte Brown", 920, R.drawable.lipstick)
-                )
+        val items = when (category) {
+            "Beauty" -> listOf(
+                Catalogue(title = "Nivea Moisturizer", description = "Skin care", price = 349, imageRes = R.drawable.nivea),
+                Catalogue(title="Makeup Kit", description = "Eyeshadow palette", price=799, imageRes=R.drawable.makeup),
+                Catalogue(title="Maybelline Mascara", description="Black Bold Mascara", price=349, imageRes = R.drawable.mascara),
+                Catalogue(title = "Elle 18 Kajal", description = "Black Smoky Kajal", price = 120, imageRes = R.drawable.kajal),
+                Catalogue(title = "Pilgrim Serum", description = "Skin care", price = 449, imageRes = R.drawable.pilgrim),
+                Catalogue(title = "Lip gloss", description = "Lip gloss", price = 99, imageRes = R.drawable.gloss),
+                Catalogue(title = "Maybelline cheek tint", description = "Cherry Blush", price = 679, imageRes = R.drawable.blush),
+                Catalogue(title = "Lakme Lipstick", description = "Matte Brown", price = 920, imageRes = R.drawable.lipstick)
             )
-            "Electronic" -> productList.addAll(
-                listOf(
-                    Catalogue("Headphones", "Wireless", 1999, R.drawable.electronics),
-                    Catalogue("Laptop", "Office use", 45999, R.drawable.electronics),
-                    Catalogue("Tv", "Television ", 650, R.drawable.tv),
-                    Catalogue("Pendrive", "wireless", 1000, R.drawable.pendrive),
-                    Catalogue("Iron", "Home use", 2999, R.drawable.iron),
-                    Catalogue("speaker", " ", 4999, R.drawable.speaker)
-                )
+
+            "Electronic" -> listOf(
+                Catalogue(title = "Headphones", description = "Wireless", price = 1999, imageRes = R.drawable.electronics),
+                Catalogue(title = "Laptop", description = "Office use", price = 45999, imageRes = R.drawable.electronics),
+                Catalogue(title = "Tv", description = "Television ", price = 650, imageRes = R.drawable.tv),
+                Catalogue(title = "Pendrive", description = "wireless", price = 1000, imageRes = R.drawable.pendrive),
+                Catalogue(title = "Iron", description = "Home use", price = 2999, imageRes = R.drawable.iron),
+                Catalogue(title = "Speaker", description = "Wireless", 4999, imageRes = R.drawable.speaker)
             )
-            "Furniture" -> productList.addAll(
-                listOf(
-                    Catalogue("Table", "Wooden table", 2999, R.drawable.electronics),
-                    Catalogue("Chair", "Office use", 1999, R.drawable.electronics),
-                    Catalogue("Cupboard", "Wooden table", 5999, R.drawable.cupboard),
-                    Catalogue("Dinning Table", "Marble", 3999, R.drawable.dinningtable),
-                    Catalogue("Sofa", "", 6999, R.drawable.sofa),
-                    Catalogue("Rope Swing", "comfort", 1999, R.drawable.swing)
-                )
+
+            "Furniture" -> listOf(
+                Catalogue(title = "Table", description = "Wooden table", price = 2999, imageRes = R.drawable.electronics),
+                Catalogue(title = "Chair", description = "Office use", price = 1999, imageRes = R.drawable.electronics),
+                Catalogue(title = "Cupboard", description = "Wooden table", price = 5999, imageRes = R.drawable.cupboard),
+                Catalogue(title = "Dinning Table", description = "Marble", price = 3999, imageRes = R.drawable.dinningtable),
+                Catalogue(title = "Sofa", description = "", price = 6999, imageRes = R.drawable.sofa),
+                Catalogue(title = "Rope Swing", description = "Comfort", price = 1999, imageRes = R.drawable.swing)
             )
-            "Grocery" -> productList.addAll(
-                listOf(
-                    Catalogue("Onion 1kg", "Fresh", 42, R.drawable.onion),
-                    Catalogue("Potato 1kg", "Organic", 35, R.drawable.potato),
-                    Catalogue("Tomato  1kg", "Fresh", 35, R.drawable.tomato),
-                    Catalogue("Lady Finger 1kg", "Organic", 35, R.drawable.ladyfinger),
-                    Catalogue("Spinach 1kg", "Fresh", 42, R.drawable.spinach),
-                    Catalogue("Capsicum 1kg", "Organic", 35, R.drawable.capsicum)
-                )
+
+            "Grocery" -> listOf(
+                Catalogue(title = "Onion 1kg", description = "Fresh", price = 42, imageRes = R.drawable.onion),
+                Catalogue(title = "Potato 1kg", description = "Organic", price = 35, imageRes = R.drawable.potato),
+                Catalogue(title = "Tomato 1kg", description = "Fresh", price = 35, imageRes = R.drawable.tomato),
+                Catalogue(title = "Lady Finger 1kg", description = "Organic", price = 35, imageRes = R.drawable.ladyfinger),
+                Catalogue(title = "Spinach 1kg", description = "Fresh", price = 42, imageRes = R.drawable.spinach),
+                Catalogue(title = "Capsicum 1kg", description = "Organic", price = 35, imageRes = R.drawable.capsicum)
             )
-            "Womens" -> productList.addAll(
-                listOf(
-                    Catalogue("Skirt", "Red Leather Skirt", 799, R.drawable.skirt),
-                    Catalogue("Red Top", "Red cube design top", 399, R.drawable.top_women)
-                )
+
+            "Womens" -> listOf(
+                Catalogue(title = "Skirt", description = "Red Leather Skirt", price = 799, imageRes = R.drawable.skirt),
+                Catalogue(title = "Red Top", description = "Red cube design top", price = 399, imageRes = R.drawable.top_women)
             )
+
+            else -> emptyList()
         }
 
+        allProducts.addAll(items)
+        productList.addAll(items)
         productAdapter.notifyDataSetChanged()
+    }
+
+    // 🔍 Search + Clear Logic (FIXED)
+    fun filterProducts(query: String) {
+        val filtered = if (query.isEmpty()) {
+            allProducts
+        } else {
+            allProducts.filter {
+                it.title.contains(query, true)
+            }
+        }
+        productAdapter.updateList(filtered)
     }
 }

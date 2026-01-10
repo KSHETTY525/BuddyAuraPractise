@@ -14,6 +14,8 @@ class CategoryAdapter(
     private val onClick: (Category) -> Unit
 ) : RecyclerView.Adapter<CategoryAdapter.CategoryViewHolder>() {
 
+    private var selectedPosition = 0   // 🔹 Track selected category
+
     inner class CategoryViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val image: CircleImageView = view.findViewById(R.id.categoryImage)
         val name: TextView = view.findViewById(R.id.categoryName)
@@ -31,9 +33,18 @@ class CategoryAdapter(
         holder.image.setImageResource(item.imageRes)
         holder.name.text = item.name
 
-        // ✅ CLICK HANDLER (THIS WAS MISSING)
+        // 🔹 Highlight selected category
+        if (position == selectedPosition) {
+            holder.name.setTextColor(holder.itemView.context.getColor(R.color.ocean))
+        } else {
+            holder.name.setTextColor(holder.itemView.context.getColor(R.color.black))
+        }
+
+        // ✅ Click handler
         holder.itemView.setOnClickListener {
-            onClick(item)
+            selectedPosition = position
+            notifyDataSetChanged()   // refresh UI highlight
+            onClick(item)           // call fragment logic
         }
     }
 

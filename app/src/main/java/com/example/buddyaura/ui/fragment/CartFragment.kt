@@ -39,7 +39,6 @@ class CartFragment : Fragment(R.layout.fragment_cart) {
         recyclerView = view.findViewById(R.id.cartRecycler)
 
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-
         updateCartUI()
 
         cartReceiver = CartUpdateReceiver {
@@ -78,10 +77,8 @@ class CartFragment : Fragment(R.layout.fragment_cart) {
                 .setPositiveButton("Yes") { _, _ ->
                     CartManager.removeSelectedItems(requireContext())
                     updateCartUI()
-
                     // 🔥 Update cart badge instantly
                     (activity as? HomeActivity)?.updateCartBadgeFromFragment()
-
                     Toast.makeText(requireContext(), "Products removed", Toast.LENGTH_SHORT).show()
                 }
                 .setNegativeButton("No") { dialog, _ ->
@@ -105,8 +102,6 @@ class CartFragment : Fragment(R.layout.fragment_cart) {
         proceedBtn.isEnabled = items.isNotEmpty()
         updateSummary()
     }
-
-
 
     // ✅ MOVE THIS FUNCTION HERE ⬇⬇⬇
     private fun updateSummary() {

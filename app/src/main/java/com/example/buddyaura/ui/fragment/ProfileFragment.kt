@@ -20,14 +20,12 @@ import androidx.fragment.app.Fragment
 import com.example.buddyaura.R
 
 class ProfileFragment : Fragment() {
-
     private lateinit var profileImage: ImageView
     private lateinit var editIcon: ImageView
     private lateinit var deleteIcon: ImageView
     private var currentImageUri: Uri? = null
     private var denyCount = 0
     private var isFirstSet = true
-
 
     // ---------------- Permission Launcher ----------------
     private val permissionLauncher =
@@ -196,7 +194,6 @@ class ProfileFragment : Fragment() {
             }
             .show()
     }
-
     private fun openCamera() {
         try {
             cameraLauncher.launch(null)
@@ -204,7 +201,6 @@ class ProfileFragment : Fragment() {
             Toast.makeText(requireContext(), "Camera app not found", Toast.LENGTH_SHORT).show()
         }
     }
-
     private fun openGallery() {
         galleryLauncher.launch("image/*")
     }
