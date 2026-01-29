@@ -52,4 +52,10 @@
             android:visibility="gone"/>
     </LinearLayout>
 
+    <Button
+        android:id="@+id/btnLoadProfile"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Load Image" />
+
 </LinearLayout>

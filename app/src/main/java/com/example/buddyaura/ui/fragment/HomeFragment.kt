@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -41,6 +42,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private lateinit var categoryRecycler: RecyclerView
     private lateinit var productRecycler: RecyclerView
     private lateinit var productAdapter: CatalogueAdapter
+
     private val bannerImages = listOf(
         R.drawable.banner1,
         R.drawable.banner2,
@@ -50,14 +52,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private val bannerHandler = Handler(Looper.getMainLooper())
     private var bannerPosition = 0
 
+    // 🔹 Pagination variables
     private var currentPage = 1
     private val pageSize = 6
     private var isLoading = false
-    private var isLastPage = false
+    private var hasNextPage = true
     private var currentSearch: String? = null
 
-    private val pagedSource = mutableListOf<Catalogue>()
-    private val displayProducts = mutableListOf<Catalogue>()
+    private val productList = mutableListOf<Catalogue>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -77,9 +79,6 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         setupProducts()
         loadInitialProducts()
         scheduleOfferAlarm()
-
-
-
     }
 
     // 🔴 CART BADGE
@@ -148,20 +147,43 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 Category("Womens", R.drawable.womens),
                 Category("Toys and Games", R.drawable.toys)
             )
-        ) {}
+        ) {
+            clickedCategory ->
+            openCategoryFragment(clickedCategory.name)
+        }
     }
 
-    // 🛍️ PRODUCTS
+    private fun openCategoryFragment(categoryName: String){
+        parentFragmentManager.beginTransaction()
+            .replace(R.id.fragmentContainer, CategoryFragment.newInstance(categoryName))
+            .addToBackStack(null)
+            .commit()
+    }
+
+    // 🛍️ PRODUCTS + PAGINATION
     private fun setupProducts() {
         productRecycler.layoutManager = LinearLayoutManager(requireContext())
-        productAdapter = CatalogueAdapter(displayProducts)
-        productRecycler.adapter = productAdapter   // ✅ MUST be here
+
+        productAdapter = CatalogueAdapter(productList)
+        productRecycler.adapter = productAdapter
 
         productRecycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                if (!isLoading && !isLastPage && dy > 0) loadNextPage()
+                super.onScrolled(rv, dx, dy)
+
+                val layoutManager = rv.layoutManager as LinearLayoutManager
+                val visibleItemCount = layoutManager.childCount
+                val totalItemCount = layoutManager.itemCount
+                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+
+                if (!isLoading && hasNextPage) {
+                    if (firstVisibleItemPosition + visibleItemCount >= totalItemCount - 2) {
+                        loadNextPage()
+                    }
+                }
             }
         })
+
     }
 
     private fun fetchProducts(page: Int, search: String?) {
@@ -169,7 +191,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
+                Log.d("PAGINATION", "Requesting page: $page")
+
                 val response = RetrofitClient.api.getHomeFeed(page, pageSize, search)
+
+                Log.d("PAGINATION", "Received products: ${response.data.catalogues.size}")
+                Log.d("PAGINATION", "Has next page: ${response.data.pagination.hasNextPage}")
 
                 val products = response.data.catalogues.map {
                     Catalogue(
@@ -181,18 +208,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 }
 
                 if (page == 1) {
-                    pagedSource.clear()
-                    displayProducts.clear()
+                    productAdapter.clearItems()
                 }
 
-                pagedSource.addAll(products)
+                productAdapter.addItems(products)
 
-                requireActivity().runOnUiThread {
-                    loadNextPage()
-                    productAdapter.notifyDataSetChanged()
-                }
-
-                isLastPage = page >= response.data.pagination.totalPages
+                hasNextPage = response.data.pagination.hasNextPage
                 currentPage++
 
             } catch (e: Exception) {
@@ -203,27 +224,21 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         }
     }
 
+
     private fun loadInitialProducts() {
-        fetchProducts(page = 1, search = null)
-    }
-
-    // 📄 PAGINATION DISPLAY
-    private fun loadNextPage() {
-        val start = displayProducts.size
-        val end = minOf(start + pageSize, pagedSource.size)
-
-        if (start >= pagedSource.size) return
-
-        displayProducts.addAll(pagedSource.subList(start, end))
-        productAdapter.notifyDataSetChanged()
-    }
-
-    // 🔍 SEARCH
-    fun filterProducts(query: String) {
         currentPage = 1
+        hasNextPage = true
+        fetchProducts(currentPage, null)
+    }
+
+    private fun loadNextPage() {
+        fetchProducts(currentPage, currentSearch)
+    }
+
+    // 🔍 SEARCH SUPPORT
+    fun filterProducts(query: String) {
         currentSearch = if (query.isEmpty()) null else query
-        isLastPage = false
-        fetchProducts(1, currentSearch)
+        loadInitialProducts()
     }
 
     // 📡 CART BROADCAST

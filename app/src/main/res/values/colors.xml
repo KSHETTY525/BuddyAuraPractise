@@ -4,4 +4,5 @@
     <color name="white">#FFFFFFFF</color>
     <color name="ocean">#2EC4B6</color>
     <color name="red">#FF0000</color>
+    <color name="grey">#D3D3D3</color>
 </resources>

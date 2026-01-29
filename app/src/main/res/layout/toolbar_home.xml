@@ -3,8 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/toolbar"
     android:layout_width="match_parent"
-    android:layout_height="56dp"
-    android:layout_marginTop="15dp"
+    android:layout_height="65dp"
+    android:layout_marginTop="10dp"
     android:background="@android:color/white"
     android:elevation="4dp">
 
@@ -24,12 +24,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end|center_vertical"
-        android:layout_marginEnd="10dp">
+        android:layout_marginEnd="15dp">
 
         <ImageView
             android:id="@+id/cartIcon"
-            android:layout_width="30dp"
-            android:layout_height="30dp"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
             android:src="@drawable/cart"/>
 
         <!-- Cart Count Badge -->
@@ -38,8 +38,8 @@
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:layout_gravity="top|end"
-            android:layout_marginEnd="-4dp"
-            android:layout_marginTop="-4dp"
+            android:layout_marginEnd="0dp"
+            android:layout_marginTop="0dp"
             android:background="@drawable/cart_badge_bg"
             android:text="0"
             android:textColor="@android:color/white"

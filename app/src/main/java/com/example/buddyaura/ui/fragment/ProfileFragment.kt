@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -11,18 +12,30 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
 import com.example.buddyaura.R
+import com.example.buddyaura.util.RetrofitClient
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 
 class ProfileFragment : Fragment() {
     private lateinit var profileImage: ImageView
     private lateinit var editIcon: ImageView
     private lateinit var deleteIcon: ImageView
+
+    private lateinit var btnLoadProfile: Button
     private var currentImageUri: Uri? = null
     private var denyCount = 0
     private var isFirstSet = true
@@ -58,6 +71,7 @@ class ProfileFragment : Fragment() {
                 profileImage.setImageURI(it)
                 deleteIcon.visibility = View.VISIBLE
                 showSuccessToast()
+                uploadProfileImage(it)
             }
         }
 
@@ -68,6 +82,13 @@ class ProfileFragment : Fragment() {
                 profileImage.setImageBitmap(it)
                 deleteIcon.visibility = View.VISIBLE
                 showSuccessToast()
+
+                val file = bitmapToFile(it)
+                val part = prepareImagePart(file)
+
+                lifecycleScope.launch {
+                    RetrofitClient.uploadApi.uploadProfilePic(part)
+                }
             }
         }
 
@@ -93,6 +114,21 @@ class ProfileFragment : Fragment() {
         profileImage = view.findViewById(R.id.profileImage)
         editIcon = view.findViewById(R.id.editIcon)
         deleteIcon = view.findViewById(R.id.deleteIcon)
+        btnLoadProfile = view.findViewById(R.id.btnLoadProfile)
+
+        btnLoadProfile.setOnClickListener {
+            lifecycleScope.launch {
+                val response = RetrofitClient.uploadApi.getProfileImage()
+
+                if (response.isSuccessful){
+                    val imageUrl = response.body()?.imageUrl
+
+                    Glide.with(requireContext())
+                        .load(imageUrl)
+                        .into(profileImage)
+                }
+            }
+        }
 
         profileImage.setOnClickListener { handleProfileClick() }
         editIcon.setOnClickListener {
@@ -175,6 +211,65 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
+    private fun uriToFile(uri: Uri): File {
+        val inputStream = requireContext().contentResolver.openInputStream(uri)!!
+        val file = File(requireContext().cacheDir, "${System.currentTimeMillis()}.jpg")
+
+        file.outputStream().use {
+            output ->
+            inputStream.copyTo(output)
+        }
+        return file
+    }
+
+    private fun prepareImagePart(file: File): MultipartBody.Part {
+        val requestBody = file.asRequestBody("image/*".toMediaTypeOrNull())
+
+        return MultipartBody.Part.createFormData(
+            "file",
+            file.name,
+            requestBody
+        )
+    }
+
+    private fun uploadProfileImage(uri: Uri) {
+
+        val file = uriToFile(uri)
+        val imagePart = prepareImagePart(file)
+
+        lifecycleScope.launch {
+            try {
+                val response = RetrofitClient.uploadApi.uploadProfilePic(imagePart)
+
+                if (response.isSuccessful) {
+
+                    val imageUrl = response.body()?.imageUrl
+
+                    if (imageUrl != null) {
+                        // 🔥 Load from server
+                        Glide.with(requireContext())
+                            .load(imageUrl)
+                            .into(profileImage)
+
+                        Toast.makeText(requireContext(), "Uploaded & Loaded!", Toast.LENGTH_SHORT).show()
+                    }
+
+                } else {
+                    Toast.makeText(requireContext(), "Upload failed", Toast.LENGTH_SHORT).show()
+                }
+
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), e.message, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    private fun bitmapToFile(bitmap: Bitmap): File {
+        val file = File(requireContext().cacheDir, "camera.jpg")
+        val stream = FileOutputStream(file)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+        stream.close()
+        return file
+    }
     private fun openAppSettings() {
         val intent = Intent(
             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,

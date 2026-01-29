@@ -3,6 +3,9 @@ package com.example.buddyaura.ui.adapter
 import android.app.AlertDialog
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
+import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,17 +15,15 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.buddyaura.data.Catalogue
-import com.example.buddyaura.R
 import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
-import android.graphics.Bitmap
-import android.graphics.drawable.Drawable
-import android.provider.MediaStore
+import com.example.buddyaura.R
+import com.example.buddyaura.data.Catalogue
 
 class CatalogueAdapter(
-    private val items: List<Catalogue>
+    private val items: MutableList<Catalogue>
 ) : RecyclerView.Adapter<CatalogueAdapter.ViewHolder>() {
+
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val productImage: ImageView = itemView.findViewById(R.id.productImage)
         val productTitle: TextView = itemView.findViewById(R.id.productTitle)
@@ -63,11 +64,26 @@ class CatalogueAdapter(
         holder.shareBtn.setOnClickListener {
             showKycDialog(holder.itemView.context)
         }
-
     }
-    override fun getItemCount(): Int = items.size
-    private fun saveImageToGallery(context: Context, bitmap: Bitmap) {
 
+    override fun getItemCount(): Int = items.size
+
+    // ✅ Pagination support
+    fun addItems(newItems: List<Catalogue>) {
+        val start = items.size
+        items.addAll(newItems)
+        notifyItemRangeInserted(start, newItems.size)
+    }
+
+    // ✅ For refresh
+    fun clearItems() {
+        items.clear()
+        notifyDataSetChanged()
+    }
+
+    // ================= IMAGE DOWNLOAD =================
+
+    private fun saveImageToGallery(context: Context, bitmap: Bitmap) {
         val filename = "BuddyAura_${System.currentTimeMillis()}.jpg"
 
         val resolver = context.contentResolver
@@ -88,9 +104,7 @@ class CatalogueAdapter(
         }
     }
 
-
     private fun downloadImage(context: Context, imageUrl: String) {
-
         Glide.with(context)
             .asBitmap()
             .load(imageUrl)
@@ -107,6 +121,7 @@ class CatalogueAdapter(
             })
     }
 
+    // ================= KYC DIALOG =================
 
     private fun showKycDialog(context: Context) {
         AlertDialog.Builder(context)
@@ -114,7 +129,6 @@ class CatalogueAdapter(
             .setMessage("To become a reseller, you must complete your KYC.")
             .setPositiveButton("Complete KYC") { _, _ ->
                 Toast.makeText(context, "Redirecting to KYC...", Toast.LENGTH_SHORT).show()
-                // Later you can navigate to KYC screen here
             }
             .setNegativeButton("Cancel") { dialog, _ ->
                 dialog.dismiss()

@@ -35,7 +35,15 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
 
     // 🔹 Display list (filtered)
     private val productList = mutableListOf<Catalogue>()
-
+    companion object {
+        fun newInstance(category: String): CategoryFragment {
+            val fragment = CategoryFragment()
+            val bundle = Bundle()
+            bundle.putString("CATEGORY_NAME", category)
+            fragment.arguments = bundle
+            return fragment
+        }
+    }
     private val categories = listOf(
         Category("Beauty", R.drawable.beauty),
         Category("Electronic", R.drawable.electronics),
@@ -50,6 +58,7 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val selectedCategory = arguments?.getString("CATEGORY_NAME")
 
         cartBadge = requireActivity().findViewById(R.id.cartBadge)
         updateCartBadgeFromFragment(CartManager.getItemCount())
@@ -66,16 +75,24 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
         productRecycler = view.findViewById(R.id.productGridRecycler)
 
         categoryRecycler.layoutManager = LinearLayoutManager(requireContext())
-        categoryRecycler.adapter = CategoryAdapter(categories) { category ->
+        val categoryAdapter = CategoryAdapter(categories) { category ->
             loadProducts(category.name)
         }
+
+        categoryRecycler.adapter = categoryAdapter
 
         productRecycler.layoutManager = GridLayoutManager(requireContext(), 2)
         productAdapter = CategoryProductAdapter(productList)
         productRecycler.adapter = productAdapter
 
-        // Load first category by default
-        loadProducts(categories.first().name)
+        // Load the clicked category first (IMPORTANT)
+        if (selectedCategory != null) {
+            categoryAdapter.setSelectedCategory(selectedCategory)
+            loadProducts(selectedCategory)
+        } else {
+            categoryAdapter.setSelectedCategory(categories.first().name)
+            loadProducts(categories.first().name)
+        }
     }
 
     override fun onStart() {
@@ -196,6 +213,15 @@ class CategoryFragment : Fragment(R.layout.fragment_category) {
             "Womens" -> listOf(
                 Catalogue(title = "Skirt", description = "Red Leather Skirt", price = 799, imageRes = R.drawable.skirt),
                 Catalogue(title = "Red Top", description = "Red cube design top", price = 399, imageRes = R.drawable.top_women)
+            )
+
+            "Mens" -> listOf(
+                Catalogue(title = "Black Trousers", description = "Black Men Trousers", price = 999, imageRes = R.drawable.black_formals),
+                Catalogue(title = "Tshirt", description = "Batman Tshirt", price = 399, imageRes = R.drawable.tshirt_men),
+                Catalogue(title = "Baby Pink Shirt", description = "Shirt", price = 599, imageRes = R.drawable.pink_shirt_men),
+                Catalogue(title = "Yellow Kurta Patiala & Dupatta", description = "Kurtas", price = 1299, imageRes = R.drawable.yellow_kurta_pajama),
+                Catalogue(title = "Black Polo Tshirt", description = "Polo Tshirt", price = 799, imageRes = R.drawable.black_polo),
+                Catalogue(title = "Pale Blue Jeans", description = "Classic Loose Fit Jeans", price = 1599, imageRes = R.drawable.light_blue_jeans_men)
             )
 
             else -> emptyList()

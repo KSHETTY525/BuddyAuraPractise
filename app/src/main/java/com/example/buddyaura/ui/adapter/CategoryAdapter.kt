@@ -48,5 +48,13 @@ class CategoryAdapter(
         }
     }
 
+    fun setSelectedCategory(categoryName: String) {
+        val index = list.indexOfFirst { it.name == categoryName }
+        if (index != -1) {
+            selectedPosition = index
+            notifyDataSetChanged()
+        }
+    }
+
     override fun getItemCount(): Int = list.size
 }
