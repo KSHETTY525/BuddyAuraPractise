@@ -7,13 +7,29 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <ImageView
-            android:id="@+id/productImage"
+        <!-- IMAGE + SHARE ICON -->
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="300dp"
-            android:adjustViewBounds="true"
-            android:scaleType="fitCenter" />
+            android:layout_height="wrap_content">
 
+            <ImageView
+                android:id="@+id/productImage"
+                android:layout_width="match_parent"
+                android:layout_height="300dp"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter" />
+
+            <ImageButton
+                android:id="@+id/btnShare"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_alignParentEnd="true"
+                android:layout_margin="8dp"
+                android:src="@drawable/ic_share"
+                android:background="@android:color/transparent"
+                android:contentDescription="Share"
+                android:tint="@color/black"/>
+        </RelativeLayout>
         <TextView
             android:id="@+id/productName"
             android:textSize="18sp"
@@ -88,6 +104,8 @@
                 android:text="Add to Cart"
                 android:backgroundTint="@color/ocean"
                 />
+
+
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
