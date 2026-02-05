@@ -38,6 +38,7 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
         val plus = view.findViewById<Button>(R.id.btnPlus)
         val minus = view.findViewById<Button>(R.id.btnMinus)
         val addToCart = view.findViewById<Button>(R.id.btnAddToCart)
+        val shareBtn = view.findViewById<ImageButton>(R.id.btnShare) // ✅ SHARE
 
         val productName = arguments?.getString("name") ?: ""
         val productPrice = arguments?.getInt("price") ?: 0
@@ -71,12 +72,27 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
 
             CartManager.addItem(requireContext(), item)
 
-            // 🔥 INSTANT badge update
             (activity as? HomeActivity)?.updateCartBadgeFromFragment()
 
             Toast.makeText(requireContext(), "Added to cart", Toast.LENGTH_SHORT).show()
         }
 
+        // ✅ SHARE BUTTON WORKING
+        shareBtn.setOnClickListener {
+
+            val shareText = """
+                Check out this product 🛍️
+                
+                Name: $productName
+                Price: ₹$productPrice
+            """.trimIndent()
+
+            val shareIntent = Intent(Intent.ACTION_SEND)
+            shareIntent.type = "text/plain"
+            shareIntent.putExtra(Intent.EXTRA_TEXT, shareText)
+
+            startActivity(Intent.createChooser(shareIntent, "Share via"))
+        }
     }
 
     override fun onStart() {
@@ -95,10 +111,6 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
         super.onStop()
         requireActivity().unregisterReceiver(cartReceiver)
     }
-
-
-
-
 
     private fun updateCartBadge(count: Int) {
         if (count > 0) {
