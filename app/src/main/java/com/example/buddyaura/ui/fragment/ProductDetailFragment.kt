@@ -2,6 +2,7 @@ package com.example.buddyaura.ui.fragment
 
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Paint
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -31,24 +32,45 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
             updateCartBadge(count)
         }
 
+        // Views
         val image = view.findViewById<ImageView>(R.id.productImage)
         val name = view.findViewById<TextView>(R.id.productName)
         val price = view.findViewById<TextView>(R.id.productPrice)
+        val originalPrice = view.findViewById<TextView>(R.id.productOriginalPrice)
+        val offText = view.findViewById<TextView>(R.id.productOff)
+
         val qty = view.findViewById<TextView>(R.id.quantityText)
         val plus = view.findViewById<Button>(R.id.btnPlus)
         val minus = view.findViewById<Button>(R.id.btnMinus)
         val addToCart = view.findViewById<Button>(R.id.btnAddToCart)
-        val shareBtn = view.findViewById<ImageButton>(R.id.btnShare) // ✅ SHARE
+        val shareBtn = view.findViewById<ImageButton>(R.id.btnShare)
 
+        // Data from arguments
         val productName = arguments?.getString("name") ?: ""
-        val productPrice = arguments?.getInt("price") ?: 0
+        val productPriceValue = arguments?.getInt("price") ?: 0
         val imageRes = arguments?.getInt("imageRes") ?: R.drawable.blush
 
+        // 🔥 DISCOUNT CALCULATION (20% OFF)
+        val discountPercent = 20
+        val discountAmount = (productPriceValue * discountPercent) / 100
+        val finalPrice = productPriceValue - discountAmount
+
+        // Set UI
         image.setImageResource(imageRes)
         name.text = productName
-        price.text = "₹$productPrice"
+
+        price.text = "₹$finalPrice"
+        originalPrice.text = "₹$productPriceValue"
+
+        // Strike original price
+        originalPrice.paintFlags =
+            originalPrice.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+
+        offText.text = "$discountPercent% OFF"
+
         qty.text = quantity.toString()
 
+        // Quantity buttons
         plus.setOnClickListener {
             quantity++
             qty.text = quantity.toString()
@@ -61,11 +83,12 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
             }
         }
 
+        // Add To Cart (uses discounted price)
         addToCart.setOnClickListener {
 
             val item = CartItem(
                 name = productName,
-                price = productPrice,
+                price = finalPrice,   // ✅ discounted price
                 quantity = quantity,
                 imageRes = imageRes
             )
@@ -77,14 +100,23 @@ class ProductDetailFragment : Fragment(R.layout.fragment_product_detail) {
             Toast.makeText(requireContext(), "Added to cart", Toast.LENGTH_SHORT).show()
         }
 
-        // ✅ SHARE BUTTON WORKING
+        val backBtn = view.findViewById<ImageButton>(R.id.btnBack)
+
+        backBtn.setOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
+
+
+        // ✅ SHARE BUTTON (with discount)
         shareBtn.setOnClickListener {
 
             val shareText = """
                 Check out this product 🛍️
                 
-                Name: $productName
-                Price: ₹$productPrice
+                $productName
+                
+                Price: ₹$finalPrice
+                (20% OFF — Original ₹$productPriceValue)
             """.trimIndent()
 
             val shareIntent = Intent(Intent.ACTION_SEND)
