@@ -12,6 +12,7 @@ import com.bumptech.glide.Glide
 import com.example.buddyaura.R
 import com.example.buddyaura.data.Catalogue
 import com.example.buddyaura.ui.fragment.ProductDetailFragment
+import com.example.buddyaura.util.WishlistManager   // ✅ ADDED
 
 class CategoryProductAdapter(
     private val list: MutableList<Catalogue>
@@ -22,6 +23,8 @@ class CategoryProductAdapter(
         val name: TextView = view.findViewById(R.id.productName)
         val desc: TextView = view.findViewById(R.id.productDesc)
         val price: TextView = view.findViewById(R.id.productPrice)
+
+        val wishlist: ImageView = view.findViewById(R.id.ivWishlist) // ✅ ADDED
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -32,10 +35,9 @@ class CategoryProductAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = list[position]
-
         val context = holder.itemView.context
 
-        if (item.imageUrl != null && item.imageUrl.isNotEmpty()) {
+        if (!item.imageUrl.isNullOrEmpty()) {
             Glide.with(context)
                 .load(item.imageUrl)
                 .placeholder(R.drawable.placeholder)
@@ -51,6 +53,24 @@ class CategoryProductAdapter(
         holder.desc.text = item.description
         holder.price.text = "₹${item.price}"
 
+        // ❤️ WISHLIST LOGIC (ONLY ADDITION)
+        val isLiked = WishlistManager.isWishlisted(item)
+        holder.wishlist.setImageResource(
+            if (isLiked) R.drawable.ic_heart_filled
+            else R.drawable.ic_heart_outline
+        )
+
+        holder.wishlist.setOnClickListener {
+            if (WishlistManager.isWishlisted(item)) {
+                WishlistManager.remove(item)
+                holder.wishlist.setImageResource(R.drawable.ic_heart_outline)
+            } else {
+                WishlistManager.add(item)
+                holder.wishlist.setImageResource(R.drawable.ic_heart_filled)
+            }
+        }
+        // ❤️ END WISHLIST LOGIC
+
         holder.itemView.setOnClickListener {
             val fragment = ProductDetailFragment()
 
@@ -58,7 +78,7 @@ class CategoryProductAdapter(
                 putString("imageUrl", item.imageUrl)
                 putInt("imageRes", item.imageRes ?: 0)
                 putString("name", item.title)
-                putString("description", item.description)
+                putString("productDescription", item.description)
                 putInt("price", item.price)
             }
 
@@ -72,7 +92,6 @@ class CategoryProductAdapter(
                 .commit()
         }
     }
-
 
     override fun getItemCount(): Int = list.size
 

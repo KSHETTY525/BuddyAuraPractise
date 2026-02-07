@@ -30,6 +30,7 @@
             android:id="@+id/cartIcon"
             android:layout_width="35dp"
             android:layout_height="35dp"
+            android:layout_marginLeft="5dp"
             android:src="@drawable/cart"/>
 
         <!-- Cart Count Badge -->
@@ -47,5 +48,12 @@
             android:gravity="center"
             android:visibility="gone"/>
     </FrameLayout>
+
+    <ImageView
+        android:id="@+id/wishlistIcon"
+        android:layout_gravity="end"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:src="@drawable/ic_heart_outline"/>
 
 </androidx.appcompat.widget.Toolbar>

@@ -43,8 +43,18 @@ class HomeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
+        // 🛒 Cart icon
         val cartIcon = findViewById<ImageView>(R.id.cartIcon)
         cartIcon.setOnClickListener { openCartFragment() }
+
+        // ❤️ Wishlist icon (ADDED)
+        val wishlistIcon = findViewById<ImageView>(R.id.wishlistIcon)
+        wishlistIcon.setOnClickListener {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.fragmentContainer, WishlistFragment())
+                .addToBackStack("Wishlist")
+                .commit()
+        }
 
         drawerLayout = findViewById(R.id.drawerlayout)
         navigationView = findViewById(R.id.navigationView)
@@ -56,7 +66,6 @@ class HomeActivity : AppCompatActivity() {
         val clearIcon = findViewById<ImageView>(R.id.clearIcon)
 
         cartBadge = findViewById(R.id.cartBadge)
-
         updateCartBadgeFromFragment()
 
         cartReceiver = CartUpdateReceiver {
@@ -64,39 +73,22 @@ class HomeActivity : AppCompatActivity() {
         }
 
         navigationView.setNavigationItemSelectedListener { item ->
-
             when (item.itemId) {
-
-                R.id.nav_home -> {
-                    loadFragment(HomeFragment())
-                }
-
-                R.id.nav_profile -> {
-                    loadFragment(ProfileFragment())
-                }
-
-                R.id.nav_cart -> {
-                    loadFragment(CartFragment())
-                }
-
-                R.id.nav_logout -> {
-                    showLogoutDialog()
-                }
+                R.id.nav_home -> loadFragment(HomeFragment())
+                R.id.nav_profile -> loadFragment(ProfileFragment())
+                R.id.nav_cart -> loadFragment(CartFragment())
+                R.id.nav_logout -> showLogoutDialog()
             }
-
             drawerLayout.closeDrawer(GravityCompat.START)
             true
         }
 
-
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 clearIcon.visibility = if (s.isNullOrEmpty()) View.GONE else View.VISIBLE
                 applySearchToCurrentFragment(s.toString())
             }
-
             override fun afterTextChanged(s: Editable?) {}
         })
 
@@ -108,7 +100,10 @@ class HomeActivity : AppCompatActivity() {
 
         voiceIcon.setOnClickListener {
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            intent.putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
             startActivityForResult(intent, 1001)
         }
@@ -116,7 +111,8 @@ class HomeActivity : AppCompatActivity() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayShowTitleEnabled(false)
 
-        val toggle = ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.open, R.string.close)
+        val toggle =
+            ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.open, R.string.close)
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
@@ -145,10 +141,7 @@ class HomeActivity : AppCompatActivity() {
             .setTitle("Logout")
             .setMessage("Are you sure you want to logout?")
             .setPositiveButton("Yes") { _, _ ->
-
                 val prefs = getSharedPreferences(Constants.PREF_NAME, MODE_PRIVATE)
-
-                // 🔐 Clear login session
                 prefs.edit()
                     .putBoolean(Constants.KEY_IS_LOGGED_IN, false)
                     .remove(Constants.KEY_USERNAME)
@@ -162,15 +155,12 @@ class HomeActivity : AppCompatActivity() {
 
                 Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("No") { dialog, _ ->
-                dialog.dismiss()
-            }
+            .setNegativeButton("No") { dialog, _ -> dialog.dismiss() }
             .show()
     }
 
     private fun applySearchToCurrentFragment(query: String) {
         val fragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
-
         when (fragment) {
             is HomeFragment -> fragment.filterProducts(query)
             is CategoryFragment -> fragment.filterProducts(query)
@@ -179,7 +169,6 @@ class HomeActivity : AppCompatActivity() {
 
     fun updateCartBadgeFromFragment() {
         val count = CartManager.getItemCount()
-
         if (count > 0) {
             cartBadge.visibility = View.VISIBLE
             cartBadge.text = count.toString()
@@ -191,7 +180,12 @@ class HomeActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         val filter = IntentFilter(BroadcastActions.CART_UPDATED)
-        ContextCompat.registerReceiver(this, cartReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(
+            this,
+            cartReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     override fun onStop() {
@@ -232,5 +226,4 @@ class HomeActivity : AppCompatActivity() {
             }
         }
     }
-
 }
